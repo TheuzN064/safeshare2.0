@@ -1,5 +1,7 @@
 <?php
 require_once 'db.php';
+requireLogin($pdo); // protege a página
+
 $currentPage = 'bancos';
 $alertRestrict = false;
 
@@ -11,6 +13,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'nome' => $_POST['nome'] ?? '',
             'codigo' => $_POST['codigo_banco'] ?? '',
         ]);
+
+        // registra log se você tiver addLog()
+        addLog($pdo, $userId, 'BANCO_CRIADO', 'Banco "' . ($_POST['nome'] ?? '') . '" cadastrado');
+
         header('Location: bancos.php');
         exit;
     }
@@ -19,6 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare('DELETE FROM bancos WHERE id = :id');
             $stmt->execute(['id' => $_POST['id']]);
+
+            // registra log da exclusão
+            addLog($pdo, $userId, 'BANCO_EXCLUIDO', 'Banco ID ' . ($_POST['id']));
+
             header('Location: bancos.php');
             exit;
         } catch (PDOException $e) {

@@ -1,5 +1,7 @@
 <?php
 require_once 'db.php';
+requireLogin($pdo);
+
 $currentPage = 'cartoes';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,6 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'cvv' => $_POST['cvv'] ?? '',
             'bandeira' => $_POST['bandeira'] ?? '',
         ]);
+
+        addLog($pdo, $userId, 'CARTAO_ADICIONADO', 'Cartão ' . ($_POST['bandeira'] ?? '') . ' vinculado a banco ID ' . ($_POST['id_banco'] ?? ''));
+
         header('Location: cartoes.php');
         exit;
     }
@@ -23,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_card' && isset($_POST['id'])) {
         $stmt = $pdo->prepare('DELETE FROM cartoes WHERE id = :id AND id_usuario = :user');
         $stmt->execute(['id' => $_POST['id'], 'user' => $userId]);
+
+        addLog($pdo, $userId, 'CARTAO_EXCLUIDO', 'Cartão ID ' . ($_POST['id']));
+
         header('Location: cartoes.php');
         exit;
     }

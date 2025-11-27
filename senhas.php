@@ -1,5 +1,7 @@
 <?php
 require_once 'db.php';
+requireLogin($pdo);
+
 $currentPage = 'senhas';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -14,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'login' => $_POST['login'] ?? '',
             'senha' => $_POST['senha'] ?? '',
         ]);
+
+        addLog($pdo, $userId, 'LOGIN_ADICIONADO', 'Login para ' . ($_POST['site_nome'] ?? ''));
+
         header('Location: senhas.php');
         exit;
     }
@@ -21,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_login' && isset($_POST['id'])) {
         $stmt = $pdo->prepare('DELETE FROM logins WHERE id = :id AND id_usuario = :user');
         $stmt->execute(['id' => $_POST['id'], 'user' => $userId]);
+
+        addLog($pdo, $userId, 'LOGIN_EXCLUIDO', 'Login ID ' . ($_POST['id']));
+
         header('Location: senhas.php');
         exit;
     }
@@ -104,7 +112,9 @@ $logins = $stmt->fetchAll();
                     <tr>
                         <td>
                             <div><?= htmlspecialchars($login['site_nome']) ?></div>
-                            <?php if (!empty($login['site_url'])): ?><small class="muted"><?= htmlspecialchars($login['site_url']) ?></small><?php endif; ?>
+                            <?php if (!empty($login['site_url'])): ?>
+                                <small class="muted"><?= htmlspecialchars($login['site_url']) ?></small>
+                            <?php endif; ?>
                         </td>
                         <td><?= htmlspecialchars($login['login']) ?></td>
                         <td>
@@ -115,7 +125,10 @@ $logins = $stmt->fetchAll();
                             </div>
                         </td>
                         <td>
-                            <span class="badge"><span class="dot" style="background: <?= htmlspecialchars($login['cor_hex']) ?>"></span><?= htmlspecialchars($login['categoria_nome']) ?></span>
+                            <span class="badge">
+                                <span class="dot" style="background: <?= htmlspecialchars($login['cor_hex']) ?>"></span>
+                                <?= htmlspecialchars($login['categoria_nome']) ?>
+                            </span>
                         </td>
                         <td>
                             <form method="POST" onsubmit="return confirm('Excluir login?');">
@@ -131,6 +144,7 @@ $logins = $stmt->fetchAll();
         </section>
     </main>
 </div>
+
 <script>
 function togglePassword(btn) {
     const input = btn.parentElement.querySelector('[data-password]');
