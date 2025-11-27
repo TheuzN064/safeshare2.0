@@ -47,6 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: cartoes.php');
         exit;
     }
+
+    if ($action === 'restore_card' && isset($_POST['id'])) {
+        $stmt = $pdo->prepare('UPDATE cartoes SET ativo = 1 WHERE id = :id AND id_usuario = :user');
+        $stmt->execute(['id' => $_POST['id'], 'user' => $userId]);
+        addLog($pdo, $userId, 'CARTAO_REATIVADO', 'Cartão ID ' . ($_POST['id']));
+        header('Location: cartoes.php');
+        exit;
+    }
 }
 
 $bancos = $pdo->query('SELECT * FROM bancos WHERE ativo = 1 ORDER BY nome')->fetchAll();
@@ -54,6 +62,11 @@ $sql = 'SELECT c.*, b.nome AS banco_nome FROM cartoes c INNER JOIN bancos b ON c
 $stmt = $pdo->prepare($sql);
 $stmt->execute(['user' => $userId]);
 $cartoes = $stmt->fetchAll();
+
+$sqlInativos = 'SELECT c.*, b.nome AS banco_nome FROM cartoes c LEFT JOIN bancos b ON c.id_banco = b.id WHERE c.id_usuario = :user AND c.ativo = 0 ORDER BY c.id DESC';
+$stmtInativos = $pdo->prepare($sqlInativos);
+$stmtInativos->execute(['user' => $userId]);
+$cartoesInativos = $stmtInativos->fetchAll();
 
 if (isset($_GET['edit'])) {
     $stmt = $pdo->prepare('SELECT c.* FROM cartoes c WHERE c.id = :id AND c.id_usuario = :user AND c.ativo = 1');
@@ -156,6 +169,36 @@ if (isset($_GET['edit'])) {
                 <?php endforeach; ?>
             </div>
         </section>
+
+        <?php if ($cartoesInativos): ?>
+        <section class="card">
+            <div class="header">
+                <h3>Cartões desativados</h3>
+                <span class="muted">Reative para voltar a listar</span>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr><th>Número</th><th>Banco</th><th>Titular</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($cartoesInativos as $cartao): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($cartao['numero']) ?></td>
+                        <td><?= htmlspecialchars($cartao['banco_nome'] ?? 'N/D') ?></td>
+                        <td><?= htmlspecialchars($cartao['titular']) ?></td>
+                        <td>
+                            <form method="POST" style="display:inline" onsubmit="return confirm('Reativar este cartão?');">
+                                <input type="hidden" name="action" value="restore_card">
+                                <input type="hidden" name="id" value="<?= $cartao['id'] ?>">
+                                <button type="submit" class="button secondary">Reativar</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </section>
+        <?php endif; ?>
     </main>
 </div>
 </body>

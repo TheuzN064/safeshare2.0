@@ -43,6 +43,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     }
+
+    if ($action === 'restore_banco' && isset($_POST['id'])) {
+        $stmt = $pdo->prepare('UPDATE bancos SET ativo = 1 WHERE id = :id');
+        $stmt->execute(['id' => $_POST['id']]);
+        addLog($pdo, $userId, 'BANCO_REATIVADO', 'Banco ID ' . ($_POST['id']));
+        header('Location: bancos.php');
+        exit;
+    }
 }
 
 if (isset($_GET['edit'])) {
@@ -52,6 +60,7 @@ if (isset($_GET['edit'])) {
 }
 
 $bancos = $pdo->query('SELECT * FROM bancos WHERE ativo = 1 ORDER BY nome')->fetchAll();
+$bancosInativos = $pdo->query('SELECT * FROM bancos WHERE ativo = 0 ORDER BY nome')->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -123,6 +132,35 @@ $bancos = $pdo->query('SELECT * FROM bancos WHERE ativo = 1 ORDER BY nome')->fet
                 </tbody>
             </table>
         </section>
+
+        <?php if ($bancosInativos): ?>
+        <section class="card">
+            <div class="header">
+                <h3>Bancos desativados</h3>
+                <span class="muted">Visíveis apenas aqui</span>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr><th>Nome</th><th>Código</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($bancosInativos as $banco): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($banco['nome']) ?></td>
+                        <td><?= htmlspecialchars($banco['codigo_banco']) ?></td>
+                        <td>
+                            <form method="POST" style="display:inline" onsubmit="return confirm('Reativar este banco?');">
+                                <input type="hidden" name="action" value="restore_banco">
+                                <input type="hidden" name="id" value="<?= $banco['id'] ?>">
+                                <button type="submit" class="button secondary">Reativar</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </section>
+        <?php endif; ?>
     </main>
 </div>
 <?php if ($alertRestrict): ?>

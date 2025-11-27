@@ -44,6 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: senhas.php');
         exit;
     }
+
+    if ($action === 'restore_login' && isset($_POST['id'])) {
+        $stmt = $pdo->prepare('UPDATE logins SET ativo = 1 WHERE id = :id AND id_usuario = :user');
+        $stmt->execute(['id' => $_POST['id'], 'user' => $userId]);
+        addLog($pdo, $userId, 'LOGIN_REATIVADO', 'Login ID ' . ($_POST['id']));
+        header('Location: senhas.php');
+        exit;
+    }
 }
 
 $categorias = $pdo->query('SELECT * FROM categorias ORDER BY nome')->fetchAll();
@@ -51,6 +59,11 @@ $sql = 'SELECT l.*, c.nome AS categoria_nome, c.cor_hex FROM logins l INNER JOIN
 $stmt = $pdo->prepare($sql);
 $stmt->execute(['user' => $userId]);
 $logins = $stmt->fetchAll();
+
+$sqlInativos = 'SELECT l.*, c.nome AS categoria_nome, c.cor_hex FROM logins l INNER JOIN categorias c ON l.id_categoria = c.id WHERE l.id_usuario = :user AND l.ativo = 0 ORDER BY l.id DESC';
+$stmtInativos = $pdo->prepare($sqlInativos);
+$stmtInativos->execute(['user' => $userId]);
+$loginsInativos = $stmtInativos->fetchAll();
 
 if (isset($_GET['edit'])) {
     $stmt = $pdo->prepare('SELECT * FROM logins WHERE id = :id AND id_usuario = :user AND ativo = 1');
@@ -164,6 +177,38 @@ if (isset($_GET['edit'])) {
                 </tbody>
             </table>
         </section>
+
+        <?php if ($loginsInativos): ?>
+        <section class="card">
+            <div class="header">
+                <h3>Logins desativados</h3>
+                <span class="muted">Exibidos apenas para reativação</span>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr><th>Site</th><th>Login</th><th>Categoria</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($loginsInativos as $login): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($login['site_nome']) ?></td>
+                        <td><?= htmlspecialchars($login['login']) ?></td>
+                        <td>
+                            <span class="badge"><span class="dot" style="background: <?= htmlspecialchars($login['cor_hex']) ?>"></span><?= htmlspecialchars($login['categoria_nome']) ?></span>
+                        </td>
+                        <td>
+                            <form method="POST" style="display:inline" onsubmit="return confirm('Reativar este login?');">
+                                <input type="hidden" name="action" value="restore_login">
+                                <input type="hidden" name="id" value="<?= $login['id'] ?>">
+                                <button type="submit" class="button secondary">Reativar</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </section>
+        <?php endif; ?>
     </main>
 </div>
 <script>
